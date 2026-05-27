@@ -260,6 +260,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   display: flex;
   align-items: flex-start;
   gap: 14px;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  z-index: 1;
 }
 .pos-card:hover { border-color: var(--navy); background: #f3f1ea; }
 .pos-card.selected { border-color: var(--gold); background: #fdf9f0; box-shadow: 0 0 0 3px rgba(200,168,75,0.15); }
@@ -381,12 +385,127 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 /* ===== PRINT ===== */
 @media print {
-  .site-header, .stepbar, .btn-row, .sig-actions, .no-print { display: none !important; }
-  .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
-  body { background: white; }
-  .main { padding: 0; }
-  .panel { display: block !important; }
+  /* ซ่อนทุกอย่างยกเว้น print template */
+  body > *         { display: none !important; }
+  #print-template  { display: block !important; }
+
+  /* บังคับขนาด A4 และ fit หน้าเดียว */
+  @page {
+    size: A4 landscape;
+    margin: 8mm 10mm;
+  }
+
+  #print-template {
+    width: 277mm;
+    min-height: 0;
+    transform-origin: top left;
+    font-size: 10px !important;
+    padding: 0 !important;
+  }
+
+  #print-template h2.pt-title { font-size: 12px !important; margin-bottom: 1px; }
+  #print-template .pt-sub     { font-size: 11px !important; margin-bottom: 1px; }
+  #print-template .pt-org     { font-size: 11px !important; margin-bottom: 6px; }
+
+  #print-template table.pt-table          { font-size: 9.5px !important; margin-bottom: 8px; }
+  #print-template table.pt-table th,
+  #print-template table.pt-table td       { padding: 3px 5px !important; line-height: 1.35; }
+
+  #print-template .pt-sig-row  { margin-top: 10px; }
+  #print-template .pt-sig-line { margin: 28px 10px 4px; }
+  #print-template .pt-sig-line.has-img { margin-top: 2px; }
+  #print-template .pt-sig-img  { max-height: 50px !important; }
+  #print-template .pt-date     { font-size: 10px !important; }
+
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ===== PRINT TEMPLATE ===== */
+#print-template {
+  display: none;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 13px;
+  color: #000;
+  padding: 12mm 14mm;
+  line-height: 1.5;
+}
+#print-template h2.pt-title {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+#print-template .pt-sub {
+  text-align: center;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+#print-template .pt-org {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-decoration: underline;
+}
+#print-template table.pt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+#print-template table.pt-table th,
+#print-template table.pt-table td {
+  border: 1px solid #333;
+  padding: 5px 7px;
+  vertical-align: top;
+}
+#print-template table.pt-table th {
+  background: #d9d9d9;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.4;
+}
+#print-template table.pt-table td.sec-hd {
+  background: #f2f2f2;
+  font-weight: 600;
+}
+#print-template table.pt-table td.sub-task {
+  padding-left: 16px;
+}
+#print-template table.pt-table td.center { text-align: center; }
+#print-template table.pt-table td.total-row { background: #f9f9f9; font-style: italic; text-align: center; }
+#print-template .pt-sig-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  margin-top: 20px;
+  gap: 30px;
+}
+#print-template .pt-sig-box {
+  flex: 1;
+  text-align: center;
+}
+#print-template .pt-sig-img {
+  max-height: 70px;
+  max-width: 200px;
+  display: block;
+  margin: 0 auto 4px;
+}
+#print-template .pt-sig-line {
+  border-bottom: 1px solid #333;
+  margin: 44px 10px 6px;
+}
+#print-template .pt-sig-line.has-img {
+  margin-top: 4px;
+}
+#print-template .pt-date {
+  text-align: center;
+  font-size: 11px;
+  color: #333;
+  margin-top: 6px;
+}
+#print-template .pt-blank-rows td { height: 22px; }
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
@@ -424,10 +543,14 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
   <div class="card">
     <div class="card-title"><span class="icon">📋</span>ข้อมูลผู้ส่งรายงาน</div>
 
-    <div class="form-grid">
+    <div class="form-grid cols-3">
       <div class="field">
         <label>ชื่อ-นามสกุล <span class="req">*</span></label>
         <input type="text" id="inp-name" placeholder="เช่น นางสาวสมใจ ใจดี">
+      </div>
+      <div class="field">
+        <label>ตำแหน่ง <span class="req">*</span></label>
+        <input type="text" id="inp-pos-label" placeholder="เช่น เจ้าหน้าที่ศาลปกครองปฏิบัติการ">
       </div>
       <div class="field">
         <label>เดือน/ปี ที่รายงาน <span class="req">*</span></label>
@@ -989,8 +1112,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <strong>ก่อนส่ง:</strong> กรุณาตรวจสอบข้อมูลและลายมือชื่อให้ครบถ้วน · กำหนดส่ง: ภายในวันที่ <strong>5 ของทุกเดือน</strong>
     </div>
     <div style="display:flex; gap:12px; flex-wrap:wrap">
-      <button class="btn btn-outline" onclick="window.print()">🖨 พิมพ์รายงาน</button>
-      <button class="btn btn-primary" onclick="savePDF()">💾 บันทึก PDF</button>
+      <button class="btn btn-outline" onclick="savePDF()">🖨 พิมพ์ / บันทึก PDF</button>
       <button class="btn btn-gold" id="btn-submit" onclick="submitReport()">📤 ส่งรายงาน</button>
     </div>
   </div>
@@ -1009,7 +1131,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
       <p id="success-msg" style="margin-top:8px"></p>
       <div style="margin-top:32px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
         <a id="success-pdf-link" href="#" target="_blank" class="btn btn-primary" style="display:none; text-decoration:none">📄 เปิด PDF ที่บันทึก</a>
-        <button class="btn btn-outline" onclick="window.print()">🖨 พิมพ์สำเนา</button>
+        <button class="btn btn-outline" onclick="savePDF()">🖨 พิมพ์สำเนา / PDF</button>
         <button class="btn btn-gold" onclick="resetForm()">📋 ส่งรายงานใหม่</button>
       </div>
     </div>
@@ -1019,7 +1141,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 </main>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNF5Onw5xMojInkz2D6gssIhJYHh-dtGim3GZHqSHvXck3EWEAuB34eUYxUbqq8nTQ4g/exec";
+const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_URL_HERE";
 
 // ===== STATE =====
 let currentPos = null;
@@ -1038,6 +1160,7 @@ const posNames = {
 function goStep(n) {
   if (n === 2) {
     if (!document.getElementById('inp-name').value.trim()) { alert('กรุณากรอกชื่อ-นามสกุลก่อน'); return; }
+    if (!document.getElementById('inp-pos-label').value.trim()) { alert('กรุณากรอกตำแหน่งก่อน'); return; }
     if (!currentPos) { alert('กรุณาเลือกตำแหน่งก่อน'); return; }
     showForm(currentPos);
     updateMonthLabels();
@@ -1059,8 +1182,18 @@ function goStep(n) {
 function selectPos(pos) {
   currentPos = pos;
   document.querySelectorAll('.pos-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('pos-' + pos).classList.add('selected');
+  const card = document.getElementById('pos-' + pos);
+  if (card) card.classList.add('selected');
 }
+
+// รองรับกรณีคลิกโดน child element ข้างใน pos-card
+document.addEventListener('click', function(e) {
+  const card = e.target.closest('.pos-card');
+  if (card && card.id && card.id.startsWith('pos-')) {
+    const pos = card.id.replace('pos-', '');
+    selectPos(pos);
+  }
+});
 
 function showForm(pos) {
   document.querySelectorAll('.form-wrap').forEach(f => f.style.display = 'none');
@@ -1086,7 +1219,7 @@ function updateMonthLabels() {
 function fillConfirmData() {
   const iso = document.getElementById('inp-month').value;
   document.getElementById('confirm-name').value  = document.getElementById('inp-name').value;
-  document.getElementById('confirm-pos').value   = posNames[currentPos] || '';
+  document.getElementById('confirm-pos').value   = document.getElementById('inp-pos-label').value || posNames[currentPos] || '';
   document.getElementById('confirm-month').value = thMonthName(iso);
   const today = new Date();
   const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -1335,9 +1468,259 @@ function showSuccess(name, iso, pdfUrl) {
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 
+// ===== PRINT / PDF =====
 function savePDF() {
-  alert('💡 กด "พิมพ์" แล้วเลือก "Save as PDF" ใน Destination ของ browser ครับ');
-  window.print();
+  if (!currentPos) { alert('กรุณาเลือกตำแหน่งและกรอกข้อมูลก่อนพิมพ์'); return; }
+  buildPrintTemplate();
+
+  // รอ DOM render แล้ว auto-scale ให้พอดี A4 landscape (277mm x 190mm ที่ 96dpi)
+  setTimeout(() => {
+    const el    = document.getElementById('print-template');
+    const A4_H  = 1020; // px ที่ 96dpi ~ 190mm (A4 landscape - margin)
+    const elH   = el.scrollHeight;
+    if (elH > A4_H) {
+      const scale = Math.max(0.5, A4_H / elH);
+      el.style.transform      = `scale(${scale})`;
+      el.style.transformOrigin = 'top left';
+      el.style.width          = `${100 / scale}%`;
+    } else {
+      el.style.transform = '';
+      el.style.width     = '';
+    }
+    window.print();
+    // reset หลังพิมพ์
+    setTimeout(() => {
+      el.style.transform = '';
+      el.style.width     = '';
+    }, 1000);
+  }, 350);
+}
+
+function buildPrintTemplate() {
+  const name     = document.getElementById('inp-name').value || '................................';
+  const posLabel = document.getElementById('inp-pos-label').value || '................................';
+  const month    = thMonthName(document.getElementById('inp-month').value);
+  const dateEl   = document.getElementById('confirm-date');
+  const today    = new Date();
+  const months   = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const date     = (dateEl && dateEl.value) ? dateEl.value : `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()+543}`;
+  const sigImg   = getSigImageTag();
+
+  let html = '';
+  if      (currentPos === 'secretary')   html = buildSecretary(name, posLabel, month, date, sigImg);
+  else if (currentPos === 'admin_case')  html = buildAdminCase(name, posLabel, month, date, sigImg);
+  else if (currentPos === 'admin_group') html = buildAdminGroup(name, posLabel, month, date, sigImg);
+  else if (currentPos === 'director')    html = buildDirector(name, posLabel, month, date, sigImg);
+
+  document.getElementById('print-template').innerHTML = html;
+}
+
+function getSigImageTag() {
+  if (sigMode === 'upload' && uploadedSigDataURL) {
+    return `<img class="pt-sig-img" src="${uploadedSigDataURL}" alt="ลายเซ็น">`;
+  }
+  const svg = document.getElementById('sig-svg');
+  if (svg && sigHasData) {
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('width','180'); clone.setAttribute('height','70');
+    const xml = new XMLSerializer().serializeToString(clone);
+    const b64 = btoa(unescape(encodeURIComponent(xml)));
+    return `<img class="pt-sig-img" src="data:image/svg+xml;base64,${b64}" alt="ลายเซ็น">`;
+  }
+  return '';
+}
+
+function rowsFromForm(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return [];
+  const out = [];
+
+  form.querySelectorAll('table.report-table tbody tr').forEach(tr => {
+    const tds    = tr.querySelectorAll('td');
+    if (!tds.length) return;
+
+    const inputs = Array.from(tr.querySelectorAll('input,textarea')).map(i => i.value.trim());
+
+    // แถว section-header — td แรก หรือ td ใดก็ได้ที่มี class section-header
+    const secTd = Array.from(tds).find(td => td.classList.contains('section-header'));
+    if (secTd) {
+      out.push({ type: 'section', task: secTd.innerText.trim() });
+      return;
+    }
+
+    // แถว task-label colspan (หัวข้อย่อย เช่น 1.1, 1.2)
+    if (tds.length === 1 || (tds[0].colSpan > 1)) {
+      const labelTd = Array.from(tds).find(td => td.classList.contains('task-label'));
+      if (labelTd && !inputs.length) {
+        out.push({ type: 'subhead', task: labelTd.innerText.trim() });
+        return;
+      }
+    }
+
+    // แถว colspan task-label ที่มี colspan แต่ไม่มี input (เช่น 1.2, 1.3)
+    if (tds[0] && (tds[0].getAttribute('colspan') > 1 || tds.length < 4) && !inputs.length) {
+      const labelTd = tds[1] || tds[0];
+      out.push({ type: 'subhead', task: labelTd.innerText.trim() });
+      return;
+    }
+
+    // แถวข้อมูลปกติ — ต้องมี input
+    if (!inputs.length) return;
+
+    const numTd  = tds[0];
+    const taskTd = tds[1] || tds[0];
+    const isSub  = taskTd.classList.contains('sub') || taskTd.classList.contains('sub-task');
+
+    out.push({
+      type:   'row',
+      num:    numTd ? numTd.innerText.trim() : '',
+      task:   taskTd ? taskTd.innerText.trim() : '',
+      isSub,
+      target: inputs[0]||'', period: inputs[1]||'',
+      result: inputs[2]||'', team:   inputs[3]||'', note: inputs[4]||''
+    });
+  });
+  return out;
+}
+
+function trFromRow(r) {
+  if (r.type === 'section') {
+    return `<tr><td class="sec-hd" colspan="7">${r.task}</td></tr>`;
+  }
+  if (r.type === 'subhead') {
+    return `<tr><td class="sec-hd" colspan="7" style="background:#f2f2f2;font-weight:normal;padding-left:14px">${r.task}</td></tr>`;
+  }
+  // แถวข้อมูล
+  const taskClass = r.isSub ? 'sub-task' : '';
+  return `<tr>
+    <td class="center" style="white-space:nowrap">${r.num}</td>
+    <td class="${taskClass}">${r.task}</td>
+    <td class="center">${r.target}</td>
+    <td class="center">${r.period}</td>
+    <td>${r.result}</td>
+    <td>${r.team}</td>
+    <td>${r.note}</td>
+  </tr>`;
+}
+
+function sigSection(name, posLabel, supName, supLabel, sigImg, date) {
+  const hasImg = sigImg ? 'has-img' : '';
+  return `
+  <div class="pt-sig-row">
+    <div class="pt-sig-box">
+      ${sigImg}
+      <div class="pt-sig-line ${hasImg}"></div>
+      <div>(${name})</div>
+      <div>ผู้ปฏิบัติงาน</div>
+      <div style="font-size:11px">${posLabel}</div>
+      <div class="pt-date">${date}</div>
+    </div>
+    <div class="pt-sig-box">
+      <div class="pt-sig-line"></div>
+      <div>(${supName})</div>
+      <div>${supLabel}</div>
+      <div class="pt-date">${date}</div>
+    </div>
+  </div>`;
+}
+
+// ── เลขาฯ หน้าห้อง ──
+function buildSecretary(name, posLabel, month, date, sigImg) {
+  const rows = rowsFromForm('form-secretary');
+  const trs  = rows.map(r => trFromRow(r)).join('');
+  return `
+  <h2 class="pt-title">แบบรายงานผลการปฏิบัติงานประจำเดือน ตั้งแต่วันที่ ${month}</h2>
+  <div class="pt-sub">ชื่อ ${name} &nbsp; ตำแหน่ง ${posLabel}</div>
+  <div class="pt-org">กลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด สำนักประธานศาลปกครองสูงสุด</div>
+  <table class="pt-table">
+    <thead>
+      <tr>
+        <th style="width:28px">ที่</th>
+        <th>งาน/กิจกรรม</th>
+        <th style="width:70px">เป้าหมาย<br>(ถ้ามี)</th>
+        <th style="width:70px">ระยะเวลา<br>(ถ้ามี)</th>
+        <th style="width:100px">ปริมาณงานหรือผลงานที่ได้ปฏิบัติจริง<br>(ปริมาณและ/หรือคุณภาพ)</th>
+        <th style="width:110px">บุคคลากรมีส่วนร่วมในการทำงาน<br>(กรณีทำร่วมกับผู้อื่นให้ระบุว่าเป็นหัวหน้าทีม/คณะ<br>เป็นหัวหน้าทีม/คณะหรือทำงานอื่นๆ)</th>
+        <th style="width:80px">ปัญหาอุปสรรค/<br>ความเห็น</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>
+  ${sigSection(name, posLabel,'(นางสาว....................)','เจ้าหน้าที่ศาลปกครองชำนาญการพิเศษ รักษาการในตำแหน่ง<br>ผู้อำนวยการกลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด', sigImg, date)}`;
+}
+
+// ── ธุรการคดี ──
+function buildAdminCase(name, posLabel, month, date, sigImg) {
+  const rows = rowsFromForm('form-admin_case');
+  const trs  = rows.map(r => trFromRow(r)).join('');
+  return `
+  <h2 class="pt-title">แบบรายงานผลการปฏิบัติงาน ${month}</h2>
+  <div class="pt-sub">${name} &nbsp;|&nbsp; ตำแหน่ง ${posLabel}</div>
+  <div class="pt-org">กลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด สำนักประธานศาลปกครองสูงสุด</div>
+  <table class="pt-table">
+    <thead>
+      <tr>
+        <th style="width:28px">ที่</th>
+        <th>งาน/กิจกรรม</th>
+        <th style="width:70px">เป้าหมาย<br>(ถ้ามี)</th>
+        <th style="width:70px">ระยะเวลา<br>(ถ้ามี)</th>
+        <th style="width:100px">ปริมาณงานหรือผลงานที่ได้ปฏิบัติจริง<br>(ปริมาณและ/หรือคุณภาพ)</th>
+        <th style="width:110px">บุคคลากรมีส่วนร่วมในการทำงาน (กรณีทำร่วมกับผู้อื่นให้ระบุว่าเป็นหัวหน้าทีม/คณะหรือทำงานอื่นๆ)</th>
+        <th style="width:80px">ปัญหาอุปสรรค/<br>ความเห็น</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>
+  ${sigSection(name, posLabel,'(นางสาว....................)','เจ้าหน้าที่ศาลปกครองชำนาญการพิเศษ รักษาการในตำแหน่ง<br>ผู้อำนวยการกลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด', sigImg, date)}`;
+}
+
+// ── ธุรการกลุ่ม ──
+function buildAdminGroup(name, posLabel, month, date, sigImg) {
+  const rows = rowsFromForm('form-admin_group');
+  const trs  = rows.map(r => trFromRow(r)).join('');
+  return `
+  <h2 class="pt-title">แบบรายงานผลการปฏิบัติงาน ประจำเดือน ${month}</h2>
+  <div class="pt-sub">ชื่อผู้ปฏิบัติงาน ${name} &nbsp; ตำแหน่ง ${posLabel}</div>
+  <div class="pt-org">กลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด สำนักประธานศาลปกครองสูงสุด</div>
+  <table class="pt-table">
+    <thead>
+      <tr>
+        <th style="width:28px">ที่</th>
+        <th>งาน/กิจกรรม</th>
+        <th style="width:70px">เป้าหมาย<br>(ถ้ามี)</th>
+        <th style="width:80px">ระยะเวลา<br>(ถ้ามี)</th>
+        <th style="width:100px">ปริมาณงานหรือผลงานที่ได้ปฏิบัติจริง<br>(ปริมาณและ/หรือคุณภาพ)</th>
+        <th style="width:110px">บุคคลากรมีส่วนร่วมในการทำงาน (กรณีทำร่วมกับผู้อื่นให้ระบุว่าเป็นหัวหน้าทีม/คณะหรือทำงานอื่นๆ)</th>
+        <th style="width:80px">ปัญหาอุปสรรค/<br>ความเห็น</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>
+  ${sigSection(name, posLabel,'(นางสาว....................)','เจ้าหน้าที่ศาลปกครองชำนาญการพิเศษ รักษาการในตำแหน่ง<br>ผู้อำนวยการกลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด', sigImg, date)}`;
+}
+
+function buildDirector(name, posLabel, month, date, sigImg) {
+  const rows = rowsFromForm('form-director');
+  const trs  = rows.map(r => trFromRow(r)).join('');
+  return `
+  <h2 class="pt-title">แบบรายงานผลการปฏิบัติงาน ประจำเดือน${month}</h2>
+  <div class="pt-sub">${name} &nbsp;|&nbsp; ตำแหน่ง ${posLabel}</div>
+  <div class="pt-org">กลุ่มเลขานุการตุลาการในศาลปกครองสูงสุด สำนักประธานศาลปกครองสูงสุด</div>
+  <table class="pt-table">
+    <thead>
+      <tr>
+        <th style="width:28px">ที่</th>
+        <th>งาน/กิจกรรม</th>
+        <th style="width:60px">เป้าหมาย<br>(ถ้ามี)</th>
+        <th style="width:70px">ระยะเวลา<br>(ถ้ามี)</th>
+        <th style="width:110px">ปริมาณงานหรือผลงานที่ได้ปฏิบัติจริง<br>(ปริมาณและ/หรือคุณภาพ)</th>
+        <th style="width:120px">บุคคลากรมีส่วนร่วมในการทำงาน (กรณีทำร่วมกับผู้อื่นให้ระบุว่าเป็นหัวหน้าทีม/คณะหรือทำงานอื่นๆ)</th>
+        <th style="width:75px">ปัญหาอุปสรรค/<br>ความเห็น</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>
+  ${sigSection(name, posLabel,'(นาย....................)','ผู้อำนวยการสำนักประธานศาลปกครองสูงสุด<br>รักษาการในตำแหน่ง ผู้ปรึกษาสำนักงานศาลปกครอง', sigImg, date)}`;
 }
 
 function resetForm() {
@@ -1354,5 +1737,8 @@ function resetForm() {
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 </script>
+<!-- ====== PRINT TEMPLATE (แสดงเฉพาะตอนพิมพ์) ====== -->
+<div id="print-template"></div>
+
 </body>
 </html>
