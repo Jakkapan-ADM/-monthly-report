@@ -763,10 +763,10 @@
 //  CONFIG — แก้ไขค่านี้ให้ตรงกับของจริง
 // ============================================================
 const CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwKpQqXbCVxfbmCxDgDqw0FVR9cQeMzn1775pvwDcNXaXkkrFiBSscYIzbh17LfGV95vw/exec',
-  TOTAL_STAFF: 85,
-  OPEN_FROM_DAY: 26,   // เปิดรับตั้งแต่วันที่ XX ของเดือนนั้น (เช่น 26)
-  CLOSE_ON_DAY: 10     // ปิดรับวันที่ XX ของเดือนถัดไป (เช่น 10)
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw0vKnK9vSfUDAepzjJ7eVcn4KLtu08HU1X4CvKw8MnTHI_tcNNDbZcjSl1gi6sQZU23Q/exec',
+  TOTAL_STAFF: 88,
+  OPEN_FROM_DAY: 29,   // เปิดรับตั้งแต่วันที่ XX ของเดือนนั้น (เช่น 26)
+  CLOSE_ON_DAY: 8     // ปิดรับวันที่ XX ของเดือนถัดไป (เช่น 10)
 };
 // ============================================================
 
@@ -901,15 +901,44 @@ function renderCountdown(state) {
   }
 }
 
+// ── JSONP helper — แก้ CORS บน GitHub Pages ─────────────────
+// fetch ปกติ ติด CORS กับ Apps Script → ใช้ <script> tag แทน
+let _jsonpCounter = 0;
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = '__jsonp_cb_' + (++_jsonpCounter);
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, 15000);
+
+    window[cbName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.onerror = () => { cleanup(); reject(new Error('JSONP script error')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    document.head.appendChild(script);
+  });
+}
+
 // ── Staff list from Apps Script ─────────────────────────────
 async function loadStaffList() {
   const sel = document.getElementById('nameSelect');
   try {
-    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getStaff`);
-    const data = await res.json();
+    const data = await jsonp(`${CONFIG.APPS_SCRIPT_URL}?action=getStaff`);
     sel.innerHTML = '<option value="">— เลือกชื่อของท่าน —</option>';
     data.staff.forEach(name => sel.appendChild(new Option(name, name)));
   } catch (e) {
+    console.error('loadStaffList:', e);
     sel.innerHTML = '<option value="">— ไม่สามารถโหลดรายชื่อได้ —</option>';
   }
   sel.addEventListener('change', checkReady);
@@ -960,8 +989,8 @@ async function loadStats(month) {
   try {
     const url = `${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(month)}`;
     console.log('loadStats fetching:', url);
-    const res  = await fetch(url);
-    const data = await res.json();
+    const res  = await jsonp(url);
+    const data   = res; // jsonp คืน object โดยตรง ไม่ต้อง .json()
     const total  = data.total || CONFIG.TOTAL_STAFF;
     const sent   = data.sent  || 0;
     const unsent = total - sent;
@@ -1031,22 +1060,20 @@ async function submitReport() {
   try {
     const base64 = await toBase64(selectedFile);
     animateProgress(0, 60, 800);
-    // ส่งผ่าน fetch POST — ใช้ Content-Type: text/plain
-    // เพื่อข้าม CORS preflight (Apps Script รองรับ simple request)
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        action:     'submitReport',
-        name, month,
-        fileName:   selectedFile.name,
-        fileSize:   selectedFile.size,
-        fileBase64: base64
-      })
+    // ส่งผ่าน JSONP — ข้าม CORS ได้ แต่ base64 ขนาดใหญ่ต้องแบ่ง chunk
+    // วิธีนี้ใช้ได้สำหรับ PDF ขนาดเล็ก-กลาง (< 1MB หลัง base64)
+    // Apps Script รับผ่าน GET parameter "data"
+    animateProgress(30, 60, 600);
+    const payload = JSON.stringify({
+      action: 'submitReport', name, month,
+      fileName: selectedFile.name,
+      fileSize: selectedFile.size,
+      fileBase64: base64
     });
-    animateProgress(60, 100, 400);
-    const data = await res.json();
+    animateProgress(60, 80, 400);
+    const data = await jsonp(
+      `${CONFIG.APPS_SCRIPT_URL}?action=submitReport&data=${encodeURIComponent(payload)}`
+    );
     await delay(400);
     if (data.success) {
       showAlert('success', `ส่งรายงานสำเร็จ! <br><small style="opacity:0.75">ชื่อ: ${name} | เดือน: ${getMonthLabel(month)} | เวลา: ${new Date().toLocaleString('th-TH')}</small>`);
