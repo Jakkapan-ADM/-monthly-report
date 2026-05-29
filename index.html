@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ส่งรายงานประจำเดือน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Noto+Serif+Thai:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #e0f2fe;
+    --sky-mid: #bae6fd;
+    --blue: #0284c7;
+    --blue-dark: #0369a1;
+    --blue-light: #38bdf8;
+    --teal: #0d9488;
+    --teal-light: #2dd4bf;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --text: #0f172a;
+    --text-mid: #334155;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --card: #ffffff;
+    --bg: #f0f9ff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Sarabun',sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(ellipse 70% 50% at 10% 0%, rgba(56,189,248,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 90% 100%, rgba(45,212,191,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 30% at 80% 10%, rgba(234,88,12,0.06) 0%, transparent 50%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .page-wrap {
+    position:relative;
+    z-index:1;
+    max-width:640px;
+    margin:0 auto;
+    padding:48px 20px 80px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align:center;
+    margin-bottom:32px;
+    animation:fadeDown 0.55s ease both;
+  }
+
+  .org-badge {
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    background:#fff;
+    border:1.5px solid var(--sky-mid);
+    border-radius:100px;
+    padding:6px 18px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--blue);
+    box-shadow:0 2px 8px rgba(2,132,199,0.1);
+    margin-bottom:20px;
+  }
+
+  .org-badge::before {
+    content:'';
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--teal-light);
+    box-shadow:0 0 0 3px rgba(45,212,191,0.25);
+    animation:pulse 2s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%,100%{ box-shadow:0 0 0 3px rgba(45,212,191,0.25); }
+    50%    { box-shadow:0 0 0 6px rgba(45,212,191,0.1);  }
+  }
+
+  h1 {
+    font-family:'Noto Serif Thai',serif;
+    font-size:clamp(26px,5vw,36px);
+    font-weight:700;
+    color:var(--text);
+    line-height:1.35;
+    margin-bottom:10px;
+  }
+
+  h1 span { color:var(--blue); }
+
+  .subtitle {
+    font-size:15px;
+    color:var(--text-muted);
+    line-height:1.7;
+  }
+
+  /* ── Month display chip ── */
+  .month-chip {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    background:#fff;
+    border:1.5px solid var(--sky-mid);
+    border-radius:16px;
+    padding:18px 24px;
+    margin-bottom:20px;
+    box-shadow:0 2px 12px rgba(2,132,199,0.08);
+    animation:fadeDown 0.55s 0.06s ease both;
+  }
+
+  .month-chip-left { display:flex; align-items:center; gap:14px; }
+
+  .month-icon {
+    width:48px; height:48px;
+    background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    box-shadow:0 4px 10px rgba(2,132,199,0.25);
+    flex-shrink:0;
+  }
+
+  .month-info-label {
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    margin-bottom:3px;
+  }
+
+  .month-info-value {
+    font-family:'Noto Serif Thai',serif;
+    font-size:20px;
+    font-weight:700;
+    color:var(--text);
+    line-height:1.2;
+  }
+
+  .month-info-period {
+    font-size:12px;
+    color:var(--text-muted);
+    margin-top:2px;
+  }
+
+  /* ── Status / Countdown chip ── */
+  .status-chip {
+    text-align:right;
+    flex-shrink:0;
+  }
+
+  .countdown-badge {
+    display:inline-block;
+    font-size:13px;
+    font-weight:700;
+    padding:6px 14px;
+    border-radius:10px;
+    white-space:nowrap;
+  }
+
+  .countdown-badge.open {
+    background:linear-gradient(135deg,var(--orange),#c2410c);
+    color:#fff;
+    box-shadow:0 3px 8px rgba(234,88,12,0.3);
+  }
+
+  .countdown-badge.soon {
+    background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+    color:#fff;
+    box-shadow:0 3px 8px rgba(2,132,199,0.3);
+  }
+
+  .countdown-sub {
+    font-size:11px;
+    color:var(--text-muted);
+    margin-top:5px;
+  }
+
+  /* ── Closed banner ── */
+  .closed-banner {
+    background:var(--sky);
+    border:1.5px solid var(--sky-mid);
+    border-radius:16px;
+    padding:28px 24px;
+    text-align:center;
+    margin-bottom:24px;
+    animation:fadeUp 0.55s 0.15s ease both;
+  }
+
+  .closed-icon { font-size:40px; margin-bottom:12px; }
+
+  .closed-title {
+    font-size:18px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:6px;
+  }
+
+  .closed-desc {
+    font-size:14px;
+    color:var(--text-muted);
+    line-height:1.7;
+  }
+
+  .closed-desc strong { color:var(--blue); }
+
+  /* ── Card ── */
+  .card {
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:24px;
+    padding:36px;
+    box-shadow:0 4px 24px rgba(2,132,199,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    animation:fadeUp 0.55s 0.15s ease both;
+  }
+
+  .section-label {
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--blue);
+    margin-bottom:8px;
+  }
+
+  /* ── Selects ── */
+  .select-wrap {
+    position:relative;
+    margin-bottom:22px;
+  }
+
+  select {
+    width:100%;
+    padding:13px 44px 13px 16px;
+    background:#fff;
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    color:var(--text);
+    font-family:'Sarabun',sans-serif;
+    font-size:15px;
+    appearance:none;
+    cursor:pointer;
+    transition:border-color 0.2s, box-shadow 0.2s;
+  }
+
+  select:focus {
+    outline:none;
+    border-color:var(--blue-light);
+    box-shadow:0 0 0 3px rgba(56,189,248,0.2);
+  }
+
+  select option { background:#fff; color:#0f172a; }
+
+  .select-arrow {
+    position:absolute;
+    right:14px;
+    top:50%;
+    transform:translateY(-50%);
+    pointer-events:none;
+    color:var(--text-muted);
+    font-size:12px;
+  }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    border:2px dashed #cbd5e1;
+    border-radius:18px;
+    padding:48px 24px;
+    text-align:center;
+    cursor:pointer;
+    transition:all 0.22s;
+    background:#fafcff;
+    margin-bottom:20px;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color:var(--blue-light);
+    background:var(--sky);
+    box-shadow:0 0 0 4px rgba(56,189,248,0.12);
+  }
+
+  .drop-zone.has-file {
+    border-style:solid;
+    border-color:var(--teal);
+    background:#f0fdfa;
+    box-shadow:0 0 0 4px rgba(13,148,136,0.08);
+  }
+
+  .drop-icon { font-size:44px; margin-bottom:12px; display:block; }
+
+  .drop-title {
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:6px;
+  }
+
+  .drop-hint { font-size:13px; color:var(--text-muted); }
+
+  .drop-hint span {
+    color:var(--blue);
+    text-decoration:underline;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  #fileInput { display:none; }
+
+  /* ── File info ── */
+  .file-info {
+    display:none;
+    align-items:center;
+    gap:12px;
+    background:#f0fdfa;
+    border:1.5px solid #99f6e4;
+    border-radius:12px;
+    padding:12px 16px;
+    margin-bottom:20px;
+  }
+
+  .file-info.show { display:flex; }
+
+  .file-icon { font-size:26px; }
+
+  .file-details { flex:1; min-width:0; }
+
+  .file-name {
+    font-size:14px;
+    font-weight:700;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .file-size { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+  .file-remove {
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    cursor:pointer;
+    font-size:18px;
+    padding:4px 8px;
+    border-radius:6px;
+    transition:color 0.2s, background 0.2s;
+  }
+
+  .file-remove:hover { color:var(--red); background:var(--red-light); }
+
+  /* ── Progress ── */
+  .progress-wrap { display:none; margin-bottom:18px; }
+  .progress-wrap.show { display:block; }
+
+  .progress-label {
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--text-muted);
+    margin-bottom:7px;
+  }
+
+  .progress-bar-bg {
+    height:7px;
+    background:var(--sky);
+    border-radius:100px;
+    overflow:hidden;
+  }
+
+  .progress-bar-fill {
+    height:100%;
+    background:linear-gradient(90deg,var(--blue),var(--teal-light));
+    border-radius:100px;
+    width:0%;
+    transition:width 0.3s ease;
+  }
+
+  /* ── Submit button ── */
+  .btn-submit {
+    width:100%;
+    padding:16px;
+    background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+    border:none;
+    border-radius:14px;
+    color:#fff;
+    font-family:'Sarabun',sans-serif;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.22s;
+    box-shadow:0 4px 14px rgba(2,132,199,0.3);
+    letter-spacing:0.02em;
+  }
+
+  .btn-submit:hover:not(:disabled) {
+    transform:translateY(-2px);
+    box-shadow:0 8px 24px rgba(2,132,199,0.4);
+  }
+
+  .btn-submit:active:not(:disabled) { transform:translateY(0); }
+
+  .btn-submit:disabled {
+    opacity:0.4;
+    cursor:not-allowed;
+    transform:none;
+    box-shadow:none;
+  }
+
+  /* ── Alert ── */
+  .alert {
+    display:none;
+    border-radius:12px;
+    padding:14px 18px;
+    font-size:14px;
+    margin-top:16px;
+    line-height:1.6;
+  }
+
+  .alert.show { display:flex; align-items:flex-start; gap:10px; }
+
+  .alert-success {
+    background:var(--green-light);
+    border:1.5px solid #86efac;
+    color:#14532d;
+  }
+
+  .alert-error {
+    background:var(--red-light);
+    border:1.5px solid #fca5a5;
+    color:#7f1d1d;
+  }
+
+  .alert-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+
+  /* ── Divider ── */
+  .divider { height:1px; background:var(--border); margin:24px 0; }
+
+  /* ── Stat bar ── */
+  .stat-bar {
+    background:#fff;
+    border:1.5px solid var(--border);
+    border-radius:16px;
+    padding:16px 20px;
+    margin-bottom:20px;
+    box-shadow:0 2px 10px rgba(2,132,199,0.06);
+    animation:fadeUp 0.55s 0.12s ease both;
+  }
+  .stat-bar-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .stat-label { font-size:13px; font-weight:600; color:var(--text-mid); }
+  .stat-nums { font-size:13px; color:var(--text-muted); }
+  .stat-nums strong { color:var(--green); font-size:16px; font-weight:800; }
+  .stat-track { height:8px; background:#e2e8f0; border-radius:100px; overflow:hidden; }
+  .stat-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--green),#4ade80); width:0%; transition:width 1s cubic-bezier(.4,0,.2,1); }
+  .stat-footer { display:flex; justify-content:space-between; margin-top:8px; font-size:11.5px; color:var(--text-muted); }
+  .stat-footer .unsent { color:var(--red); font-weight:700; }
+
+  /* ── Admin link ── */
+  .admin-link {
+    text-align:center;
+    margin-top:24px;
+    font-size:13px;
+    color:var(--text-muted);
+    animation:fadeUp 0.55s 0.3s ease both;
+  }
+
+  .admin-link a {
+    color:var(--blue);
+    text-decoration:none;
+    font-weight:700;
+  }
+
+  .admin-link a:hover { text-decoration:underline; }
+
+  @keyframes fadeDown {
+    from { opacity:0; transform:translateY(-14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="org-badge">ระบบรายงานประจำเดือน</div>
+    <h1>ส่งรายงาน<span>ประจำเดือน</span></h1>
+    <p class="subtitle">ระบบจะกำหนดเดือนรายงานโดยอัตโนมัติ ไม่ต้องเลือกเอง</p>
+  </div>
+
+  <!-- Month display chip -->
+  <div class="month-chip" id="monthChip">
+    <div class="month-chip-left">
+      <div class="month-icon">📋</div>
+      <div>
+        <div class="month-info-label">รายงานประจำเดือน</div>
+        <div class="month-info-value" id="monthInfoValue">—</div>
+        <div class="month-info-period" id="monthInfoPeriod">—</div>
+      </div>
+    </div>
+    <div class="status-chip">
+      <div class="countdown-badge open" id="countdownBadge">—</div>
+      <div class="countdown-sub" id="countdownSub"></div>
+    </div>
+  </div>
+
+  <!-- Closed state (hidden by default) -->
+  <div class="closed-banner" id="closedBanner" style="display:none">
+    <div class="closed-icon">🔒</div>
+    <div class="closed-title">ปิดรับรายงานชั่วคราว</div>
+    <div class="closed-desc" id="closedDesc">—</div>
+  </div>
+
+  <!-- Stat bar -->
+  <div class="stat-bar" id="statBar" style="display:none">
+    <div class="stat-bar-top">
+      <div class="stat-label">📊 ความคืบหน้าการส่งรายงาน</div>
+      <div class="stat-nums"><strong id="statSent">0</strong> / <span id="statTotal">—</span> คน</div>
+    </div>
+    <div class="stat-track"><div class="stat-fill" id="statFill"></div></div>
+    <div class="stat-footer">
+      <span>ส่งแล้ว <span id="statPct">0</span>%</span>
+      <span class="unsent">ยังไม่ส่ง <span id="statUnsent">—</span> คน</span>
+    </div>
+  </div>
+
+  <!-- Upload Card -->
+  <div class="card" id="uploadCard">
+
+    <div class="section-label">ชื่อ-นามสกุล</div>
+    <div class="select-wrap" style="margin-bottom:0">
+      <select id="nameSelect"><option value="">— กำลังโหลดรายชื่อ... —</option></select>
+      <span class="select-arrow">▾</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">ไฟล์รายงาน (PDF เท่านั้น)</div>
+    <div class="drop-zone" id="dropZone">
+      <span class="drop-icon">📄</span>
+      <div class="drop-title">วางไฟล์ PDF ที่นี่</div>
+      <p class="drop-hint">หรือ <span onclick="document.getElementById('fileInput').click()">คลิกเพื่อเลือกไฟล์</span></p>
+      <input type="file" id="fileInput" accept=".pdf">
+    </div>
+
+    <div class="file-info" id="fileInfo">
+      <span class="file-icon">📄</span>
+      <div class="file-details">
+        <div class="file-name" id="fileName">-</div>
+        <div class="file-size" id="fileSize">-</div>
+      </div>
+      <button class="file-remove" id="fileRemove" title="ลบไฟล์">✕</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span>กำลังอัพโหลด...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="btnSubmit" disabled onclick="submitReport()">
+      ส่งรายงาน
+    </button>
+
+    <div class="alert alert-success" id="alertSuccess">
+      <span class="alert-icon">✅</span>
+      <div id="alertSuccessMsg">ส่งรายงานสำเร็จ!</div>
+    </div>
+    <div class="alert alert-error" id="alertError">
+      <span class="alert-icon">⚠️</span>
+      <div id="alertErrorMsg">เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง</div>
+    </div>
+
+  </div>
+
+  <div class="admin-link">
+    สำหรับผู้ดูแลระบบ → <a href="admin.html">หน้า Dashboard Admin</a>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+//  CONFIG — แก้ไขค่านี้ให้ตรงกับของจริง
+// ============================================================
+const CONFIG = {
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwbv8kxwU0YHReqG37jR5_chVC9XYAaw9EcH2BOkT4aviYpQSocKc4nqn0AXgTH49pPjw/exec',
+  TOTAL_STAFF: 88,
+  OPEN_FROM_DAY: 29,   // เปิดรับตั้งแต่วันที่ XX ของเดือนนั้น (เช่น 26)
+  CLOSE_ON_DAY: 8     // ปิดรับวันที่ XX ของเดือนถัดไป (เช่น 10)
+};
+// ============================================================
+
+const MONTH_NAMES_TH = [
+  'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
+];
+
+let selectedFile = null;
+let currentMonth = null; // "YYYY-MM" format
+
+// ── Init ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const state = calcReportState();
+  renderMonthUI(state);
+  if (state.isOpen) {
+    loadStaffList();
+    loadStats();
+    initDropZone();
+  }
+  setInterval(() => {
+    const s = calcReportState();
+    renderCountdown(s);
+  }, 60000);
+});
+
+// ── Report period logic ─────────────────────────────────────
+/*
+  Logic:
+  - วันที่ OPEN_FROM_DAY (เช่น 26) ของเดือน M → เปิดรับรายงานของเดือน M
+  - ปิดรับวันที่ CLOSE_ON_DAY (เช่น 10) ของเดือน M+1 เวลา 23:59:59
+  - ช่วงที่เหลือ (11–25) = ปิดรับ รอรอบถัดไป
+
+  ตัวอย่าง:
+  26 พ.ค. – 10 มิ.ย.  → รับรายงานของ "พฤษภาคม"
+  11 มิ.ย. – 25 มิ.ย.  → ปิดรับ
+  26 มิ.ย. – 10 ก.ค.  → รับรายงานของ "มิถุนายน"
+*/
+function calcReportState() {
+  const now = new Date();
+  const day = now.getDate();
+  const month = now.getMonth();   // 0-based
+  const year  = now.getFullYear();
+
+  let reportMonth, reportYear, deadline, openDate, isOpen;
+
+  if (day >= CONFIG.OPEN_FROM_DAY) {
+    // เปิดรับ: รายงานของเดือนนี้เอง
+    reportMonth = month;
+    reportYear  = year;
+    openDate    = new Date(year, month, CONFIG.OPEN_FROM_DAY, 0, 0, 0);
+    // deadline = วันที่ CLOSE_ON_DAY ของเดือนถัดไป
+    deadline    = new Date(year, month + 1, CONFIG.CLOSE_ON_DAY, 23, 59, 59);
+    isOpen      = true;
+  } else if (day <= CONFIG.CLOSE_ON_DAY) {
+    // ยังอยู่ในช่วงรับของเดือนก่อนหน้า
+    reportMonth = month - 1 < 0 ? 11 : month - 1;
+    reportYear  = month - 1 < 0 ? year - 1 : year;
+    openDate    = new Date(reportYear, reportMonth, CONFIG.OPEN_FROM_DAY, 0, 0, 0);
+    deadline    = new Date(year, month, CONFIG.CLOSE_ON_DAY, 23, 59, 59);
+    isOpen      = true;
+  } else {
+    // ปิดรับ (day > CLOSE_ON_DAY && day < OPEN_FROM_DAY)
+    // รายงานรอบถัดไปคือเดือนนี้ เปิดวันที่ OPEN_FROM_DAY
+    reportMonth = month;
+    reportYear  = year;
+    openDate    = new Date(year, month, CONFIG.OPEN_FROM_DAY, 0, 0, 0);
+    deadline    = new Date(year, month + 1, CONFIG.CLOSE_ON_DAY, 23, 59, 59);
+    isOpen      = false;
+  }
+
+  currentMonth = `${reportYear}-${String(reportMonth + 1).padStart(2,'0')}`;
+
+  return { isOpen, reportMonth, reportYear, openDate, deadline, now };
+}
+
+// ── Render UI based on state ────────────────────────────────
+function renderMonthUI(state) {
+  const { isOpen, reportMonth, reportYear, openDate, deadline, now } = state;
+
+  // Month chip
+  document.getElementById('monthInfoValue').textContent =
+    `${MONTH_NAMES_TH[reportMonth]} ${reportYear + 543}`;
+
+  const openDay  = openDate.getDate();
+  const openMon  = MONTH_NAMES_TH[openDate.getMonth()];
+  const closeDay = deadline.getDate();
+  const closeMon = MONTH_NAMES_TH[deadline.getMonth()];
+  document.getElementById('monthInfoPeriod').textContent =
+    `ช่วงรับ: ${openDay} ${openMon} – ${closeDay} ${closeMon}`;
+
+  renderCountdown(state);
+
+  if (isOpen) {
+    document.getElementById('closedBanner').style.display = 'none';
+    document.getElementById('uploadCard').style.display   = 'block';
+  } else {
+    document.getElementById('closedBanner').style.display = 'block';
+    document.getElementById('uploadCard').style.display   = 'none';
+
+    // คำนวณว่าเปิดรับรอบถัดไปอีกกี่วัน
+    const daysLeft = Math.ceil((openDate - now) / 86400000);
+    document.getElementById('closedDesc').innerHTML =
+      `ระบบจะเปิดรับรายงานของ <strong>${MONTH_NAMES_TH[reportMonth]} ${reportYear + 543}</strong><br>` +
+      `ในวันที่ <strong>${openDay} ${openMon} ${reportYear + 543}</strong> (อีก ${daysLeft} วัน)`;
+  }
+}
+
+function renderCountdown(state) {
+  const { isOpen, deadline, openDate, now } = state;
+  const badge = document.getElementById('countdownBadge');
+  const sub   = document.getElementById('countdownSub');
+
+  if (isOpen) {
+    badge.className = 'countdown-badge open';
+    const diff = deadline - now;
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+
+    if (d > 0)      badge.textContent = `เหลือ ${d} วัน ${h} ชม.`;
+    else if (h > 0) badge.textContent = `เหลือ ${h} ชม. ${m} นาที`;
+    else            badge.textContent = `เหลือ ${m} นาที!`;
+
+    sub.textContent = `ปิดรับ ${deadline.getDate()} ${MONTH_NAMES_TH[deadline.getMonth()]}`;
+  } else {
+    badge.className = 'countdown-badge soon';
+    const daysLeft = Math.ceil((openDate - now) / 86400000);
+    badge.textContent = `เปิดอีก ${daysLeft} วัน`;
+    sub.textContent   = `${openDate.getDate()} ${MONTH_NAMES_TH[openDate.getMonth()]}`;
+  }
+}
+
+// ── Staff list from Apps Script ─────────────────────────────
+async function loadStaffList() {
+  const sel = document.getElementById('nameSelect');
+  try {
+    const res = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getStaff`);
+    const data = await res.json();
+    sel.innerHTML = '<option value="">— เลือกชื่อของท่าน —</option>';
+    data.staff.forEach(name => sel.appendChild(new Option(name, name)));
+  } catch (e) {
+    sel.innerHTML = '<option value="">— ไม่สามารถโหลดรายชื่อได้ —</option>';
+  }
+  sel.addEventListener('change', checkReady);
+}
+
+// ── Drop zone ───────────────────────────────────────────────
+function initDropZone() {
+  const zone  = document.getElementById('dropZone');
+  const input = document.getElementById('fileInput');
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+  input.addEventListener('change', () => handleFile(input.files[0]));
+  document.getElementById('fileRemove').addEventListener('click', clearFile);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf') { showAlert('error','กรุณาอัพโหลดเฉพาะไฟล์ PDF เท่านั้น'); return; }
+  if (file.size > 20*1024*1024) { showAlert('error','ขนาดไฟล์เกิน 20 MB กรุณาบีบอัดไฟล์ก่อนอัพโหลด'); return; }
+  selectedFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+  document.getElementById('fileInfo').classList.add('show');
+  document.getElementById('dropZone').classList.add('has-file');
+  hideAlerts();
+  checkReady();
+}
+
+function clearFile() {
+  selectedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileInfo').classList.remove('show');
+  document.getElementById('dropZone').classList.remove('has-file');
+  checkReady();
+}
+
+function checkReady() {
+  const name = document.getElementById('nameSelect').value;
+  document.getElementById('btnSubmit').disabled = !(name && selectedFile);
+}
+
+// ── Stats (จำนวนคนส่งแล้ว) ────────────────────────────────
+async function loadStats() {
+  try {
+    const res  = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(currentMonth)}`);
+    const data = await res.json();
+    const total  = data.total || CONFIG.TOTAL_STAFF;
+    const sent   = data.sent  || 0;
+    const unsent = total - sent;
+    const pct    = total > 0 ? Math.round(sent / total * 100) : 0;
+
+    document.getElementById('statSent').textContent   = sent;
+    document.getElementById('statTotal').textContent  = total;
+    document.getElementById('statUnsent').textContent = unsent;
+    document.getElementById('statPct').textContent    = pct;
+    document.getElementById('statFill').style.width   = pct + '%';
+    document.getElementById('statBar').style.display  = 'block';
+  } catch(e) {
+    // ไม่แสดง stat bar ถ้า load ไม่ได้ — ไม่ error
+    console.warn('loadStats failed:', e);
+  }
+}
+
+// ── Submit ──────────────────────────────────────────────────
+async function submitReport() {
+  const name  = document.getElementById('nameSelect').value;
+  const month = currentMonth;
+  hideAlerts();
+  setLoading(true);
+  try {
+    const base64 = await toBase64(selectedFile);
+    animateProgress(0, 60, 800);
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'submitReport', name, month, fileName:selectedFile.name, fileSize:selectedFile.size, fileBase64:base64 })
+    });
+    animateProgress(60, 100, 400);
+    const data = await res.json();
+    await delay(400);
+    if (data.success) {
+      showAlert('success', `ส่งรายงานสำเร็จ! <br><small style="opacity:0.75">ชื่อ: ${name} | เดือน: ${getMonthLabel(month)} | เวลา: ${new Date().toLocaleString('th-TH')}</small>`);
+      clearFile();
+      document.getElementById('nameSelect').value = '';
+      checkReady();
+      loadStats(); // อัพเดต stat หลังส่งสำเร็จ
+    } else {
+      showAlert('error', data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    }
+  } catch (e) {
+    showAlert('error', 'ไม่สามารถเชื่อมต่อระบบได้ กรุณาตรวจสอบอินเตอร์เน็ตและลองใหม่');
+  } finally {
+    setLoading(false);
+    hideProgress();
+  }
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = on;
+  btn.textContent = on ? 'กำลังส่งรายงาน...' : 'ส่งรายงาน';
+  if (on) document.getElementById('progressWrap').classList.add('show');
+}
+
+function hideProgress() {
+  setTimeout(() => {
+    document.getElementById('progressWrap').classList.remove('show');
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressPct').textContent  = '0%';
+  }, 500);
+}
+
+function animateProgress(from, to, duration) {
+  const fill  = document.getElementById('progressFill');
+  const pct   = document.getElementById('progressPct');
+  const steps = 30, inc = (to-from)/steps, interval = duration/steps;
+  let cur = from;
+  const t = setInterval(() => {
+    cur = Math.min(cur+inc, to);
+    fill.style.width = cur+'%';
+    pct.textContent  = Math.round(cur)+'%';
+    if (cur >= to) clearInterval(t);
+  }, interval);
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+function toBase64(file) {
+  return new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=()=>rej(r.error); r.readAsDataURL(file); });
+}
+
+function formatBytes(b) {
+  if (b<1024) return b+' B';
+  if (b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function getMonthLabel(val) {
+  if (!val) return '';
+  const [y,m] = val.split('-');
+  return `${MONTH_NAMES_TH[parseInt(m)-1]} ${parseInt(y)+543}`;
+}
+
+function showAlert(type, msg) {
+  hideAlerts();
+  const el = document.getElementById(type==='success'?'alertSuccess':'alertError');
+  document.getElementById(type==='success'?'alertSuccessMsg':'alertErrorMsg').innerHTML = msg;
+  el.classList.add('show');
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function hideAlerts() {
+  document.getElementById('alertSuccess').classList.remove('show');
+  document.getElementById('alertError').classList.remove('show');
+}
+</script>
+</body>
+</html>
