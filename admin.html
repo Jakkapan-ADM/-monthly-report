@@ -260,9 +260,71 @@ tr:hover td{background:#fafbff}
 .kpi-card:nth-child(3){animation-delay:.1s}
 .kpi-card:nth-child(4){animation-delay:.15s}
 .table-card{animation:fadeSlide .35s .18s ease both}
+
+/* ── Login overlay ── */
+.login-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0fdf4 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Sarabun',sans-serif;
+}
+.login-box{
+  background:#fff;border:1.5px solid #e2e8f0;border-radius:24px;
+  padding:40px 36px;width:100%;max-width:380px;
+  box-shadow:0 8px 32px rgba(37,99,235,0.1),0 2px 8px rgba(0,0,0,0.06);
+  text-align:center;
+}
+.login-icon{font-size:44px;margin-bottom:16px}
+.login-title{font-family:'Noto Serif Thai',serif;font-size:22px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.login-sub{font-size:14px;color:#64748b;margin-bottom:28px;line-height:1.6}
+.login-label{display:block;text-align:left;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2563eb;margin-bottom:7px}
+.login-input{
+  width:100%;padding:13px 16px;
+  border:1.5px solid #e2e8f0;border-radius:12px;
+  font-family:'Sarabun',sans-serif;font-size:15px;color:#0f172a;
+  transition:all .2s;outline:none;
+  letter-spacing:.1em;
+}
+.login-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.login-input.shake{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.login-btn{
+  width:100%;margin-top:16px;padding:14px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  border:none;border-radius:12px;color:#fff;
+  font-family:'Sarabun',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 14px rgba(37,99,235,.3);
+}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(37,99,235,.4)}
+.login-btn:active{transform:none}
+.login-err{
+  display:none;margin-top:12px;padding:10px 14px;
+  background:#fef2f2;border:1px solid #fecaca;border-radius:9px;
+  font-size:13px;color:#dc2626;font-weight:600;
+}
+.login-err.show{display:block}
+.login-attempts{font-size:12px;color:#94a3b8;margin-top:10px}
 </style>
 </head>
 <body>
+
+<!-- ── Login overlay ── -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Admin Dashboard</div>
+    <div class="login-sub">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น<br>กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</div>
+    <label class="login-label" for="pwdInput">รหัสผ่าน</label>
+    <input class="login-input" id="pwdInput" type="password"
+      placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')checkLogin()">
+    <button class="login-btn" onclick="checkLogin()">เข้าสู่ระบบ</button>
+    <div class="login-err" id="loginErr">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</div>
+    <div class="login-attempts" id="loginAttempts"></div>
+  </div>
+</div>
+
 <div class="shell">
 
 <!-- ── Sidebar ── -->
@@ -399,11 +461,71 @@ let sortKey    = 'sent';
 let sortAsc    = true;
 let activeMonth = '';  // "YYYY-MM"
 
-// ── Boot ────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+// ── Login ────────────────────────────────────────────────────
+// รหัสผ่านเก็บเป็น SHA-256 hash — ไม่เก็บ plaintext ใน code
+// สร้าง hash ใหม่ได้ที่: https://emn178.github.io/online-tools/sha256.html
+// รหัสผ่านเริ่มต้น: admin1234  (เปลี่ยนได้โดยใส่ hash ของรหัสที่ต้องการ)
+const PWD_HASH    = 'a3f0ac6f4436d7e6757a4e990486299f1a37db9a2de46df297fb2a24f2e9d5d8';
+const SESSION_KEY = 'admin_auth_v1';
+const MAX_TRIES   = 5;
+let   loginTries  = 0;
+
+async function sha256(str) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkLogin() {
+  const input = document.getElementById('pwdInput');
+  const val   = input.value;
+  if (!val) return;
+
+  // rate-limit
+  if (loginTries >= MAX_TRIES) {
+    document.getElementById('loginErr').textContent = `ล็อกชั่วคราว กรุณารอ 5 นาที`;
+    document.getElementById('loginErr').classList.add('show');
+    return;
+  }
+
+  const hash = await sha256(val);
+  if (hash === PWD_HASH) {
+    // บันทึก session (ปิด-เปิด tab ไม่ต้อง login ใหม่)
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('loginOverlay').style.display = 'none';
+    initDashboard();
+  } else {
+    loginTries++;
+    input.value = '';
+    input.classList.remove('shake');
+    void input.offsetWidth; // reflow to restart animation
+    input.classList.add('shake');
+    const err = document.getElementById('loginErr');
+    err.textContent = `รหัสผ่านไม่ถูกต้อง (${loginTries}/${MAX_TRIES})`;
+    err.classList.add('show');
+    if (loginTries >= MAX_TRIES) {
+      err.textContent = `พยายามเกิน ${MAX_TRIES} ครั้ง กรุณารอ 5 นาที`;
+      input.disabled = true;
+      setTimeout(() => { input.disabled = false; loginTries = 0; err.classList.remove('show'); }, 300000);
+    }
+  }
+}
+
+function initDashboard() {
   document.getElementById('btnSheets').href = CONFIG.SHEETS_URL;
   buildMonthTabs();
   loadData();
+}
+
+// ── Boot ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // ถ้า session ยังอยู่ ข้ามหน้า login ได้เลย
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('loginOverlay').style.display = 'none';
+    initDashboard();
+  } else {
+    // โฟกัสที่ช่อง password ทันที
+    setTimeout(() => document.getElementById('pwdInput').focus(), 100);
+  }
 });
 
 // ── Month tabs (ปัจจุบัน + 5 เดือนก่อนหน้า) ────────────────
