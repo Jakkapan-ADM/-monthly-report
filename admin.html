@@ -442,7 +442,7 @@ tr:hover td{background:#fafbff}
 //  CONFIG — แก้ไขค่าเหล่านี้ให้ตรงกับของจริง
 // ============================================================
 const CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw0vKnK9vSfUDAepzjJ7eVcn4KLtu08HU1X4CvKw8MnTHI_tcNNDbZcjSl1gi6sQZU23Q/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwvVytbLhLpBcKANx5GcdplAdOeurtnCsbdPYNyqisqFJ-1dtSAUOROQP_lyP9dUzCT/exec',
   SHEETS_URL:      'https://docs.google.com/spreadsheets/d/1uQt7eLdMaFp3Dk4PDQ04Ums6oyhea2wRasvIl3gNeaQ/edit?usp=sharing',
   DRIVE_URL:       'https://drive.google.com/drive/folders/1O_FEgGkxlo5Lb_L8daykKI8cDu3kf_bW?usp=drive_link',
   TOTAL_STAFF:     88,
@@ -465,7 +465,7 @@ let activeMonth = '';  // "YYYY-MM"
 // รหัสผ่านเก็บเป็น SHA-256 hash — ไม่เก็บ plaintext ใน code
 // สร้าง hash ใหม่ได้ที่: https://emn178.github.io/online-tools/sha256.html
 // รหัสผ่านเริ่มต้น: admin1234  (เปลี่ยนได้โดยใส่ hash ของรหัสที่ต้องการ)
-const PWD_HASH    = 'a3d27aaec6d02aecb40cba0d7264e7c6e24e0e03a97c0dc74e42a88a1c93e979';
+const PWD_HASH    = 'a3f0ac6f4436d7e6757a4e990486299f1a37db9a2de46df297fb2a24f2e9d5d8';
 const SESSION_KEY = 'admin_auth_v1';
 const MAX_TRIES   = 5;
 let   loginTries  = 0;
@@ -514,24 +514,6 @@ function initDashboard() {
   document.getElementById('btnSheets').href = CONFIG.SHEETS_URL;
   buildMonthTabs();
   loadData();
-}
-
-// ── JSONP helper ─────────────────────────────────────────────
-let _jsonpCounter = 0;
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = '__jsonp_cb_' + (++_jsonpCounter);
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => { cleanup(); reject(new Error('JSONP timeout')); }, 15000);
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    function cleanup() {
-      clearTimeout(timer); delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-    script.onerror = () => { cleanup(); reject(new Error('JSONP error')); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
-    document.head.appendChild(script);
-  });
 }
 
 // ── Boot ────────────────────────────────────────────────────
@@ -600,8 +582,17 @@ async function loadData() {
 
   try {
     // ส่ง month เป็น param ให้ Apps Script กรอง
-    const url  = `${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(activeMonth)}`;
-    const data = await jsonp(url); // JSONP ข้าม CORS
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(activeMonth)}`;
+    const res  = await fetch(url);
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(parseErr) {
+      console.error('JSON parse error. Raw response:', text);
+      throw new Error('ข้อมูลที่ได้รับไม่ใช่ JSON — ตรวจสอบ Apps Script');
+    }
 
     // ── Normalise rows ────────────────────────────────────────
     // Apps Script อาจส่งมาหลายรูปแบบ รองรับทั้งหมด
