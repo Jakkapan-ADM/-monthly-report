@@ -617,7 +617,7 @@
   <div class="header">
     <div class="org-badge">ระบบรายงานประจำเดือน</div>
     <h1>ส่งรายงาน<span>ประจำเดือน</span></h1>
-    <p class="subtitle">ระบบทดลอง เริ่มใช้งานจริงรอบเดือนตุลาคม พ.ศ.2569</p>
+    <p class="subtitle">ระบบจะกำหนดเดือนรายงานโดยอัตโนมัติ ไม่ต้องเลือกเอง</p>
   </div>
 
   <!-- Month display chip -->
@@ -763,10 +763,10 @@
 //  CONFIG — แก้ไขค่านี้ให้ตรงกับของจริง
 // ============================================================
 const CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyi6gxd1gMG0WDzcNb5NV_LjCg6i2ZJMGm6WRNYeejKN5WXKKLDMzKeVOGXxrCAar-efA/exec',
-  TOTAL_STAFF: 88,
-  OPEN_FROM_DAY: 29,   // เปิดรับตั้งแต่วันที่ XX ของเดือนนั้น (เช่น 26)
-  CLOSE_ON_DAY: 8     // ปิดรับวันที่ XX ของเดือนถัดไป (เช่น 10)
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwKpQqXbCVxfbmCxDgDqw0FVR9cQeMzn1775pvwDcNXaXkkrFiBSscYIzbh17LfGV95vw/exec',
+  TOTAL_STAFF: 85,
+  OPEN_FROM_DAY: 26,   // เปิดรับตั้งแต่วันที่ XX ของเดือนนั้น (เช่น 26)
+  CLOSE_ON_DAY: 10     // ปิดรับวันที่ XX ของเดือนถัดไป (เช่น 10)
 };
 // ============================================================
 
@@ -780,11 +780,12 @@ let currentMonth = null; // "YYYY-MM" format
 
 // ── Init ────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  const state = calcReportState();
+  const state = calcReportState();   // ← set currentMonth ที่นี่
   renderMonthUI(state);
+  initModal();
+  loadStats(currentMonth);           // ← ส่ง currentMonth ตรงๆ หลัง calcReportState
   if (state.isOpen) {
     loadStaffList();
-    loadStats();
     initDropZone();
   }
   setInterval(() => {
@@ -953,9 +954,13 @@ function checkReady() {
 }
 
 // ── Stats (จำนวนคนส่งแล้ว) ────────────────────────────────
-async function loadStats() {
+async function loadStats(month) {
+  month = month || currentMonth;
+  if (!month) { console.warn('loadStats: month is null'); return; }
   try {
-    const res  = await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(currentMonth)}`);
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=getDashboard&month=${encodeURIComponent(month)}`;
+    console.log('loadStats fetching:', url);
+    const res  = await fetch(url);
     const data = await res.json();
     const total  = data.total || CONFIG.TOTAL_STAFF;
     const sent   = data.sent  || 0;
@@ -1026,18 +1031,20 @@ async function submitReport() {
   try {
     const base64 = await toBase64(selectedFile);
     animateProgress(0, 60, 800);
-    // ส่งเป็น GET เพื่อหลีกเลี่ยง CORS preflight
-    // payload เป็น JSON encode ใน query param ?data=...
-    const payload = JSON.stringify({
-      action:'submitReport', name, month,
-      fileName: selectedFile.name,
-      fileSize: selectedFile.size,
-      fileBase64: base64
+    // ส่งผ่าน fetch POST — ใช้ Content-Type: text/plain
+    // เพื่อข้าม CORS preflight (Apps Script รองรับ simple request)
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({
+        action:     'submitReport',
+        name, month,
+        fileName:   selectedFile.name,
+        fileSize:   selectedFile.size,
+        fileBase64: base64
+      })
     });
-    const res = await fetch(
-      CONFIG.APPS_SCRIPT_URL + '?action=submitReport&data=' + encodeURIComponent(payload),
-      { method: 'GET' }
-    );
     animateProgress(60, 100, 400);
     const data = await res.json();
     await delay(400);
@@ -1046,12 +1053,19 @@ async function submitReport() {
       clearFile();
       document.getElementById('nameSelect').value = '';
       checkReady();
-      loadStats(); // อัพเดต stat หลังส่งสำเร็จ
+      loadStats(currentMonth); // อัพเดต stat หลังส่งสำเร็จ
     } else {
       showAlert('error', data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     }
   } catch (e) {
-    showAlert('error', 'ไม่สามารถเชื่อมต่อระบบได้ กรุณาตรวจสอบอินเตอร์เน็ตและลองใหม่');
+    // แสดง error จริงเพื่อ debug
+    const msg = e?.message || String(e);
+    console.error('submitReport error:', e);
+    showAlert('error',
+      `ไม่สามารถเชื่อมต่อระบบได้<br>` +
+      `<small style="font-family:monospace;font-size:11px;opacity:.8">${msg}</small><br>` +
+      `<small style="opacity:.7">เปิด F12 → Console เพื่อดูรายละเอียด</small>`
+    );
   } finally {
     setLoading(false);
     hideProgress();
