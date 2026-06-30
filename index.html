@@ -61,6 +61,7 @@
   .net-card .val.neg{color:var(--loss)}
   .net-card .val.zero{color:var(--neutral)}
   .days-card .val{color:var(--accent)}
+  .grab-card .val{color:var(--accent)}
   .exp-card .val{color:var(--expense)}
   .remain-card .val.pos{color:var(--profit)}
   .remain-card .val.neg{color:var(--loss)}
@@ -99,7 +100,7 @@
 
   /* item rows */
   .item-row{display:grid;gap:8px;margin-bottom:10px;align-items:end}
-  .item-row.pl-row{grid-template-columns:110px 1fr 105px 105px 32px}
+  .item-row.pl-row{grid-template-columns:110px 85px 1fr 100px 100px 32px}
   .item-row.exp-row{grid-template-columns:110px 1fr 110px 32px}
 
   .field label{display:block;font-size:.7rem;font-weight:700;color:var(--text-dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
@@ -161,6 +162,7 @@
     body{padding:12px}
     .item-row.pl-row{grid-template-columns:1fr 1fr}
     .item-row.pl-row .del-wrap{grid-column:span 2;display:flex;justify-content:flex-end}
+    .item-row.pl-row .pl-note-wrap{grid-column:span 2}
     .item-row.exp-row{grid-template-columns:1fr 1fr}
     .cal-cell{min-height:58px;padding:4px}
     .day-note{display:none}
@@ -200,6 +202,7 @@
   <div class="summary-card loss-card"><div class="lbl">ขาดทุนรวม</div><div class="val" id="sumLoss">฿0.00</div></div>
   <div class="summary-card net-card"><div class="lbl">กำไรสุทธิ</div><div class="val zero" id="sumNet">฿0.00</div></div>
   <div class="summary-card days-card"><div class="lbl">วันที่บันทึก</div><div class="val" id="sumDays">0 วัน</div></div>
+  <div class="summary-card grab-card"><div class="lbl">รอบขับแกร็บ</div><div class="val" id="sumTrips">0 รอบ</div></div>
 </div>
 <!-- Summary EXP -->
 <div class="summary-bar" id="summaryEXP" style="display:none">
@@ -365,9 +368,9 @@ function monthEXP() { const p=monthPrefix(); const o={}; Object.entries(expData)
 
 // ── Totals ───────────────────────────────────────────────────
 function plTotals(items) {
-  let p=0,l=0;
-  (items||[]).forEach(i=>{ p+=Number(i.profit)||0; l+=Number(i.loss)||0; });
-  return {profit:p, loss:l, net:p-l};
+  let p=0,l=0,trips=0;
+  (items||[]).forEach(i=>{ p+=Number(i.profit)||0; l+=Number(i.loss)||0; if(i.cat==='ขับแกร็บ') trips+=Number(i.trips)||0; });
+  return {profit:p, loss:l, net:p-l, trips};
 }
 function expTotal(items) { return (items||[]).reduce((a,i)=>a+(Number(i.amount)||0),0); }
 
@@ -380,9 +383,9 @@ function render() {
   const dataPL = monthPL(), dataEXP = monthEXP();
 
   // PL summary
-  let tP=0,tL=0,plDays=0;
+  let tP=0,tL=0,plDays=0,tTrips=0;
   Object.values(dataPL).forEach(items => {
-    const t=plTotals(items); if(t.profit||t.loss){plDays++;tP+=t.profit;tL+=t.loss;}
+    const t=plTotals(items); if(t.profit||t.loss){plDays++;tP+=t.profit;tL+=t.loss;} tTrips+=t.trips;
   });
   const netPL = tP-tL;
   document.getElementById('sumProfit').textContent = fmt(tP);
@@ -391,6 +394,7 @@ function render() {
   nEl.textContent = (netPL>=0?'+':'−')+fmt(netPL);
   nEl.className   = 'val '+(netPL>0?'pos':netPL<0?'neg':'zero');
   document.getElementById('sumDays').textContent = plDays+' วัน';
+  document.getElementById('sumTrips').textContent = tTrips+' รอบ';
 
   // EXP summary
   let tExp=0,expDays=0;
@@ -448,7 +452,7 @@ function renderCalendar(dataPL, dataEXP) {
       if (plt.profit||plt.loss) {
         const amt=document.createElement('div');
         amt.className='day-amount '+(plt.net>=0?'pos':'neg');
-        amt.textContent=(plt.net>=0?'+':'−')+fmt(plt.net);
+        amt.textContent=(plt.net>=0?'+':'−')+fmt(plt.net) + (plt.trips>0?' · '+plt.trips+'รอบ':'');
         cell.appendChild(amt);
       }
     }
@@ -473,16 +477,18 @@ function renderReport(dataPL, dataEXP) {
 function renderReportPL(wrap, dataPL) {
   const entries = Object.entries(dataPL).filter(([,v])=>v&&v.length).sort(([a],[b])=>a<b?-1:1);
   if (!entries.length) { wrap.innerHTML='<div class="empty-report">ยังไม่มีข้อมูลกำไร/ขาดทุนในเดือนนี้</div>'; return; }
-  let tP=0,tL=0,rows='';
+  let tP=0,tL=0,tTrips=0,rows='';
   entries.forEach(([key,items])=>{
     const [,,dd]=key.split('-'); const dow=new Date(key).getDay();
     items.forEach(item=>{
       const p=Number(item.profit)||0, l=Number(item.loss)||0, net=p-l;
-      tP+=p; tL+=l;
+      const trips = item.cat==='ขับแกร็บ' ? (Number(item.trips)||0) : 0;
+      tP+=p; tL+=l; tTrips+=trips;
       rows+=`<tr>
         <td class="mono">${parseInt(dd)} ${MONTHS_TH[curMonth]}</td>
         <td>${DAYS_TH[dow]}</td>
         <td>${badgePL(item.cat)}</td>
+        <td class="mono">${trips>0?trips+' รอบ':'—'}</td>
         <td class="${p>0?'pos':'mono'}">${p>0?fmt(p):'—'}</td>
         <td class="${l>0?'neg':'mono'}">${l>0?fmt(l):'—'}</td>
         <td class="${net>=0?'pos':'neg'}">${(net>=0?'+':'−')+fmt(net)}</td>
@@ -491,10 +497,11 @@ function renderReportPL(wrap, dataPL) {
     });
   });
   const tNet=tP-tL;
-  wrap.innerHTML=`<table><thead><tr><th>วันที่</th><th>วัน</th><th>หมวด</th><th>กำไร</th><th>ขาดทุน</th><th>สุทธิ</th><th>หมายเหตุ</th></tr></thead>
+  wrap.innerHTML=`<table><thead><tr><th>วันที่</th><th>วัน</th><th>หมวด</th><th>รอบ</th><th>กำไร</th><th>ขาดทุน</th><th>สุทธิ</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot class="report-foot"><tr>
       <td colspan="3" style="font-family:'Sarabun',sans-serif">รวมทั้งเดือน</td>
+      <td class="mono">${tTrips>0?tTrips+' รอบ':'—'}</td>
       <td class="pos">${fmt(tP)}</td><td class="neg">${fmt(tL)}</td>
       <td class="${tNet>=0?'pos':'neg'}">${(tNet>=0?'+':'−')+fmt(tNet)}</td><td></td>
     </tr></tfoot></table>`;
@@ -583,20 +590,30 @@ function closePanel(which) {
 function buildPLList(key) {
   const items=(plData[key]||[]).slice();
   const list=document.getElementById('plList'); list.innerHTML='';
-  if(!items.length) items.push({cat:'ขับแกร็บ',profit:'',loss:'',note:''});
+  if(!items.length) items.push({cat:'ขับแกร็บ',profit:'',loss:'',note:'',trips:''});
   items.forEach(item=>addPLRowData(item));
 }
 
-function addPLRow() { addPLRowData({cat:'ขับแกร็บ',profit:'',loss:'',note:''}); }
+function addPLRow() { addPLRowData({cat:'ขับแกร็บ',profit:'',loss:'',note:'',trips:''}); }
+
+function onPLCatChange(sel) {
+  const row = sel.closest('.item-row');
+  const tripsField = row.querySelector('.pl-trips-wrap');
+  tripsField.style.display = sel.value === 'ขับแกร็บ' ? '' : 'none';
+}
 
 function addPLRowData(item) {
   const list=document.getElementById('plList');
   const wrap=document.createElement('div'); wrap.className='item-row pl-row';
+  const isGrab = (item.cat||'ขับแกร็บ') === 'ขับแกร็บ';
   wrap.innerHTML=`
     <div class="field"><label>หมวด</label>
-      <select class="pl-cat">${PL_CATS.map(c=>`<option${c===(item.cat||'ขับแกร็บ')?' selected':''}>${c}</option>`).join('')}</select>
+      <select class="pl-cat" onchange="onPLCatChange(this)">${PL_CATS.map(c=>`<option${c===(item.cat||'ขับแกร็บ')?' selected':''}>${c}</option>`).join('')}</select>
     </div>
-    <div class="field"><label>หมายเหตุ</label>
+    <div class="field pl-trips-wrap" style="${isGrab?'':'display:none'}"><label>รอบ</label>
+      <input type="number" class="pl-trips" placeholder="0" min="0" step="1" value="${item.trips||''}">
+    </div>
+    <div class="field pl-note-wrap"><label>หมายเหตุ</label>
       <input type="text" class="pl-note" placeholder="รายละเอียด..." value="${item.note||''}">
     </div>
     <div class="field"><label>กำไร (฿)</label>
@@ -622,7 +639,8 @@ async function savePL() {
     const note=row.querySelector('.pl-note').value.trim();
     const p=parseFloat(row.querySelector('.pl-profit').value)||0;
     const l=parseFloat(row.querySelector('.pl-loss').value)||0;
-    if(p||l||note) items.push({cat,profit:p,loss:l,note});
+    const trips=cat==='ขับแกร็บ' ? (parseInt(row.querySelector('.pl-trips').value)||0) : 0;
+    if(p||l||note||trips) items.push({cat,profit:p,loss:l,note,trips});
   });
   setBusyPL(true); setStatus('loading','กำลังบันทึก...');
   try {
