@@ -145,6 +145,9 @@
 
   /* Cat badge */
   .cat-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.68rem;font-weight:600;background:var(--expense-dim);color:var(--expense)}
+  .pl-badge-ขับแกร็บ{background:#3b60e818;color:var(--accent)}
+  .pl-badge-เทรด{background:var(--profit-dim);color:var(--profit)}
+  .pl-badge-อื่นๆ{background:var(--surface2);color:var(--text-dim)}
 
   @media print{
     body{background:#fff;color:#000;padding:0}
@@ -225,7 +228,8 @@
 <!-- Entry Panel PL -->
 <div class="entry-panel" id="entryPanelPL">
   <div class="entry-title">📈 กำไร/ขาดทุน — <strong id="entryDatePL"></strong></div>
-  <div class="entry-row">
+  <div class="entry-row" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="field"><label>หมวด</label><select id="inputCatPL"></select></div>
     <div class="field"><label>กำไร (บาท)</label><input type="number" id="inputProfit" placeholder="0.00" min="0" step="0.01"></div>
     <div class="field"><label>ขาดทุน (บาท)</label><input type="number" id="inputLoss" placeholder="0.00" min="0" step="0.01"></div>
   </div>
@@ -261,10 +265,11 @@
 </div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbzxFFZVhOeK-IbwL4XmTOrM5TkLa-49JIK6CTFwwkQDhm4CjJXN2VScDm8ZL-53eM7S/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxjzWkoY6Put08i58DSCD3fOuBeOf3wsq21mLQR5eHNDrEPjKcB-zClkkHKRLvSAu47/exec';
 const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const DAYS_TH   = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const EXP_CATS  = ['อาหาร','เดินทาง','ช้อปปิ้ง','สาธารณูปโภค','บันเทิง','สุขภาพ','อื่นๆ'];
+const PL_CATS   = ['ขับแกร็บ','เทรด','อื่นๆ'];
 
 let today = new Date(), curYear = today.getFullYear(), curMonth = today.getMonth();
 let selectedKey = null, mode = 'pl';
@@ -313,7 +318,7 @@ function fetchAll() {
     Object.entries(data).forEach(([k, v]) => {
       if (k.startsWith('PL_')) {
         const date = k.slice(3);
-        plData[date] = { profit: Number(v.profit)||0, loss: Number(v.loss)||0, note: v.note||'' };
+        plData[date] = { profit: Number(v.profit)||0, loss: Number(v.loss)||0, note: v.note||'', cat: v.cat||'ขับแกร็บ' };
       } else if (k.startsWith('EXP_')) {
         const date = k.slice(4);
         try { expData[date] = typeof v.items === 'string' ? JSON.parse(v.items) : (v.items || []); }
@@ -503,15 +508,16 @@ function renderReportPL(wrap, dataPL) {
     const p=v.profit,l=v.loss,net=p-l; tP+=p;tL+=l;
     const [,,dd]=key.split('-'); const dow=new Date(key).getDay();
     rows+=`<tr><td class="mono">${parseInt(dd)} ${MONTHS_TH[curMonth]}</td><td>${DAYS_TH[dow]}</td>
+      <td><span class="cat-badge pl-badge-${(v.cat||'อื่นๆ').replace(/[^a-zA-Zก-ฮ]/g,'')}">${v.cat||'—'}</span></td>
       <td class="${p>0?'pos':'mono'}">${p>0?fmt(p):'—'}</td>
       <td class="${l>0?'neg':'mono'}">${l>0?fmt(l):'—'}</td>
       <td class="${net>=0?'pos':'neg'}">${(net>=0?'+':'−')+fmt(net)}</td>
       <td style="color:var(--text-dim);font-size:.8rem">${v.note||''}</td></tr>`;
   });
   const tNet=tP-tL;
-  wrap.innerHTML=`<table><thead><tr><th>วันที่</th><th>วัน</th><th>กำไร</th><th>ขาดทุน</th><th>สุทธิ</th><th>หมายเหตุ</th></tr></thead>
+  wrap.innerHTML=`<table><thead><tr><th>วันที่</th><th>วัน</th><th>หมวด</th><th>กำไร</th><th>ขาดทุน</th><th>สุทธิ</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot class="report-foot"><tr><td colspan="2" style="font-family:'Sarabun',sans-serif">รวมทั้งเดือน</td>
+    <tfoot class="report-foot"><tr><td colspan="3" style="font-family:'Sarabun',sans-serif">รวมทั้งเดือน</td>
     <td class="pos">${fmt(tP)}</td><td class="neg">${fmt(tL)}</td>
     <td class="${tNet>=0?'pos':'neg'}">${(tNet>=0?'+':'−')+fmt(tNet)}</td><td></td></tr></tfoot></table>`;
 }
@@ -574,8 +580,11 @@ function openEntry(key) {
     document.getElementById('entryPanelEXP').classList.add('open');
   } else {
     document.getElementById('entryPanelEXP').classList.remove('open');
-    const pl = plData[key] || {profit:0,loss:0,note:''};
+    const pl = plData[key] || {profit:0,loss:0,note:'',cat:'ขับแกร็บ'};
     document.getElementById('entryDatePL').textContent = label;
+    // build cat dropdown
+    const sel = document.getElementById('inputCatPL');
+    sel.innerHTML = PL_CATS.map(c=>`<option${c===(pl.cat||'ขับแกร็บ')?' selected':''}>${c}</option>`).join('');
     document.getElementById('inputProfit').value  = pl.profit||'';
     document.getElementById('inputLoss').value    = pl.loss||'';
     document.getElementById('inputNotePL').value  = pl.note||'';
@@ -597,6 +606,7 @@ function setBusyPL(b) { document.getElementById('btnSavePL').disabled=b; documen
 
 async function savePL() {
   if (!selectedKey) return;
+  const cat=document.getElementById('inputCatPL').value;
   const p=parseFloat(document.getElementById('inputProfit').value)||0;
   const l=parseFloat(document.getElementById('inputLoss').value)||0;
   const n=document.getElementById('inputNotePL').value.trim();
@@ -606,8 +616,8 @@ async function savePL() {
       await apiPost({key:plKey(selectedKey),action:'delete'});
       delete plData[selectedKey];
     } else {
-      await apiPost({key:plKey(selectedKey),profit:p,loss:l,note:n,action:'save'});
-      plData[selectedKey]={profit:p,loss:l,note:n};
+      await apiPost({key:plKey(selectedKey),profit:p,loss:l,note:n,action:'save',cat});
+      plData[selectedKey]={profit:p,loss:l,note:n,cat};
     }
     setStatus('ok','บันทึกสำเร็จ · '+new Date().toLocaleTimeString('th-TH'));
     render();
